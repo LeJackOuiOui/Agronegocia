@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import CartModal from "./CartModal";
 import { useState } from "react";
-import "../styles/Header.css";
+import "../../styles/Header.css";
 
 export default function Header() {
   const navigate = useNavigate();
