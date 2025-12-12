@@ -1,4 +1,6 @@
 import Card from "../components/Card";
+import Form from "../components/Form";
+import ListaProductos from "../components/ListaProductos";
 
 export default function Home() {
   const productos = [
@@ -67,6 +69,13 @@ export default function Home() {
   return (
     <div className="flex justify-center">
       <div className="shadow-xl rounded-xl p-8 w-[90%] max-w-[1200px]">
+        {/* Formulario */}
+        <Form />
+
+        {/* Lista de productos */}
+        <ListaProductos productos={productos} />
+
+        {/* Cards de productos */}
         <div className="grid grid-cols-4 gap-4 p-6">
           {productos.map((p, i) => (
             <Card key={i} content={p} />
