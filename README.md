@@ -1,6 +1,6 @@
-## 🛒 Proyecto Final - Agrocomercia
+# 🛒 Proyecto Final - Agrocomercia
 
-# 📋 Descripción del Proyecto
+## 📋 Descripción del Proyecto
   Este es un proyecto de e-commerce desarrollado con React y Vite, que incluye funcionalidades completas de autenticación, gestión de productos, carrito de compras y panel de vendedores. La aplicación utiliza Supabase como backend para base de datos, autenticación y almacenamiento.
 
 ## 🚀 Características Principales
