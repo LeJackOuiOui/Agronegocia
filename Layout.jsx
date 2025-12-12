@@ -1,3 +1,4 @@
+// Aquí importan el Header y Footer, haganlos por separado como componentes
 import Footer from "./Footer.jsx";
 
 
@@ -13,4 +14,3 @@ export default function Layout({ children }) {
     </main>
   );
 }
-
