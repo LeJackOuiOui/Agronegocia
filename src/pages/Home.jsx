@@ -1,4 +1,4 @@
-import Card from "./components/Card";
+import Card from "../components/Card";
 
 export default function Home() {
   const productos = [
@@ -66,7 +66,7 @@ export default function Home() {
 
   return (
     <div className="flex justify-center">
-      <div className="bg-white shadow-xl rounded-xl p-8 w-[90%] max-w-[1200px]">
+      <div className="shadow-xl rounded-xl p-8 w-[90%] max-w-[1200px]">
         <div className="grid grid-cols-4 gap-4 p-6">
           {productos.map((p, i) => (
             <Card key={i} content={p} />
