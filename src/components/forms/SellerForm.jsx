@@ -1,9 +1,9 @@
 // src/components/BecomeVendorForm.jsx
 import React, { useState } from "react";
-import { authService } from "../services/supabase/auth";
+import { authService } from "../../services/supabase/auth";
 import { useNavigate } from "react-router-dom";
 
-function BecomeVendorForm() {
+export default function BecomeVendorForm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nombre: "",

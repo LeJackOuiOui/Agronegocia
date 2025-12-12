@@ -1,7 +1,7 @@
 import { useState } from "react";
-import DarkModeToggle from "./Darckmode.jsx";
+import DarkModeToggle from "./Darkmode.jsx";
 import Footer from "./Footer.jsx";
-import Header from "./header.jsx";
+import Header from "./Header.jsx";
 import Alert from "./Alert.jsx";
 
 export default function Layout({ children }) {

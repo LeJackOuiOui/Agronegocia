@@ -1,4 +1,4 @@
-export default function Form() {
+export default function LoginForm() {
   return (
     <form className="bg-white p-4 rounded-lg shadow mb-6">
       <h2 className="text-xl font-bold mb-3">Agregar Producto</h2>

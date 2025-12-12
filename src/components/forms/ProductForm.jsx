@@ -1,10 +1,10 @@
 // src/components/CreateProductForm.jsx
 import React, { useState, useEffect } from "react";
-import { database } from "../services/supabase/database";
+import { database } from "../../services/supabase/database";
 import { productImageService } from "../services/api/productImageService";
-import { authService } from "../services/supabase/auth";
+import { authService } from "../../services/supabase/auth";
 
-function CreateProductForm() {
+export default function CreateProductForm() {
   const [formData, setFormData] = useState({
     nombre: "",
     precio: "",
