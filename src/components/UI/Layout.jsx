@@ -1,5 +1,4 @@
 import { useState } from "react";
-import DarkModeToggle from "./Darkmode.jsx";
 import Footer from "./Footer.jsx";
 import Header from "./Header.jsx";
 import Alert from "./Alert.jsx";
@@ -20,15 +19,6 @@ export default function Layout({ children }) {
 
       <section>{children}</section>
 
-      {/* Botón para activar la alerta (ejemplo) */}
-      <button
-        onClick={() => setShowAlert(true)}
-        className="mt-4 rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-      >
-        Activar alerta
-      </button>
-
-      <DarkModeToggle />
       <Footer />
     </main>
   );

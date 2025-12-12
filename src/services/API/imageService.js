@@ -1,109 +1,100 @@
-// src/services/api/imageService.js
+// src/services/api/productImageService.js
 import { supabase } from "../supabase/Client";
-import Compressor from "compressorjs";
 
-// Configuración
-const DEFAULT_BUCKET = "images";
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-
-class ImageService {
-  // Validar archivo antes de subir
-  validateFile(file) {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      throw new Error("Tipo de archivo no permitido");
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      throw new Error("El archivo es demasiado grande (máx 5MB)");
-    }
-
-    return true;
-  }
-
-  // Comprimir imagen
-  compressImage(file, options = {}) {
-    return new Promise((resolve, reject) => {
-      new Compressor(file, {
-        quality: options.quality || 0.8,
-        maxWidth: options.maxWidth || 1200,
-        maxHeight: options.maxHeight || 1200,
-        convertSize: 1000000, // Convertir a WebP si > 1MB
-        success: resolve,
-        error: reject,
-      });
-    });
-  }
-
-  // Generar nombre único para el archivo
-  generateFileName(file, prefix = "") {
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 8);
-    const extension = file.name.split(".").pop();
-    return `${prefix}${timestamp}-${randomString}.${extension}`;
-  }
-
-  // Subir imagen a Supabase Storage
-  async uploadImage(file, options = {}) {
+class ProductImageService {
+  async uploadProductImage(file, productId, vendedorId) {
     try {
-      // Validar
-      this.validateFile(file);
+      console.log("🟡 Iniciando subida de imagen...");
+      console.log("Archivo:", file.name, "Tamaño:", file.size);
+      console.log("Producto ID:", productId);
+      console.log("Vendedor ID:", vendedorId);
 
-      // Configuración
-      const bucket = options.bucket || DEFAULT_BUCKET;
-      const folder = options.folder || "public";
-      const shouldCompress = options.compress !== false;
-      const customName = options.customName;
-
-      let fileToUpload = file;
-
-      // Comprimir si es necesario
-      if (shouldCompress) {
-        fileToUpload = await this.compressImage(file, options.compressOptions);
+      // Validar archivo
+      if (!file || !file.type.startsWith("image/")) {
+        throw new Error("El archivo debe ser una imagen (JPG, PNG, GIF, etc.)");
       }
 
-      // Generar nombre de archivo
-      const fileName =
-        customName || this.generateFileName(file, options.prefix);
-      const filePath = `${folder}/${fileName}`;
-
-      // Subir a Supabase
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, fileToUpload, {
-          cacheControl: options.cacheControl || "3600",
-          upsert: options.upsert || false,
-          contentType: fileToUpload.type,
-        });
-
-      if (error) throw error;
-
-      // Obtener URL pública
-      const url = this.getPublicUrl(bucket, filePath);
-
-      // Si se solicita, guardar referencia en la base de datos
-      if (options.saveToDatabase) {
-        await this.saveImageMetadata({
-          url,
-          path: filePath,
-          bucket,
-          filename: fileName,
-          original_name: file.name,
-          size: fileToUpload.size,
-          type: fileToUpload.type,
-          user_id: options.userId,
-        });
+      // Tamaño máximo: 5MB
+      const MAX_SIZE = 5 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        throw new Error(
+          `La imagen es demasiado grande (${(file.size / 1024 / 1024).toFixed(
+            2
+          )}MB). Máximo: 5MB`
+        );
       }
+
+      // Generar nombre único para evitar conflictos
+      const fileExt = file.name.split(".").pop();
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 9);
+      const fileName = `producto-${productId}-${timestamp}-${randomStr}.${fileExt}`;
+      const filePath = `productos/${vendedorId}/${fileName}`;
+
+      console.log("📁 Subiendo a:", filePath);
+
+      // 1. Subir imagen al bucket de Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("images") // Asegúrate que este bucket existe
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type,
+        });
+
+      if (uploadError) {
+        console.error("❌ Error subiendo imagen:", uploadError);
+        throw new Error(`Error al subir la imagen: ${uploadError.message}`);
+      }
+
+      console.log("✅ Imagen subida exitosamente:", uploadData);
+
+      // 2. Obtener URL pública de la imagen
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("images").getPublicUrl(filePath);
+
+      console.log("🔗 URL pública generada:", publicUrl);
+
+      // 3. Actualizar el producto con la URL de la imagen
+      const { data: updatedProduct, error: updateError } = await supabase
+        .from("Productos")
+        .update({
+          imagen_url: publicUrl,
+        })
+        .eq("id_producto", productId)
+        .select() // Esto devuelve el producto actualizado
+        .single();
+
+      if (updateError) {
+        console.error(
+          "❌ Error actualizando producto con imagen:",
+          updateError
+        );
+
+        // Intentar eliminar la imagen subida si falla la actualización
+        try {
+          await supabase.storage.from("images").remove([filePath]);
+          console.log("🗑️ Imagen eliminada por fallo en actualización");
+        } catch (deleteError) {
+          console.error("⚠️ No se pudo eliminar la imagen:", deleteError);
+        }
+
+        throw new Error(
+          `Error al guardar la URL de la imagen: ${updateError.message}`
+        );
+      }
+
+      console.log("✅ Producto actualizado con imagen:", updatedProduct);
 
       return {
         success: true,
-        data,
-        url,
+        url: publicUrl,
         path: filePath,
-        filename: fileName,
+        product: updatedProduct,
       };
     } catch (error) {
-      console.error("Error en uploadImage:", error);
+      console.error("❌ Error en uploadProductImage:", error);
       return {
         success: false,
         error: error.message,
@@ -111,125 +102,92 @@ class ImageService {
     }
   }
 
-  // Obtener URL pública
-  getPublicUrl(bucket, filePath) {
-    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-
-    return data.publicUrl;
-  }
-
-  // Obtener URL firmada (para archivos privados)
-  async getSignedUrl(bucket, filePath, expiresIn = 3600) {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(filePath, expiresIn);
-
-    if (error) throw error;
-    return data.signedUrl;
-  }
-
-  // Guardar metadatos de la imagen en la base de datos
-  async saveImageMetadata(metadata) {
-    const { data, error } = await supabase
-      .from("images")
-      .insert([metadata])
-      .select();
-
-    if (error) throw error;
-    return data;
-  }
-
-  // Listar imágenes del usuario
-  async getUserImages(userId, options = {}) {
-    let query = supabase
-      .from("images")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (options.limit) {
-      query = query.limit(options.limit);
+  // Obtener URL de imagen con opciones
+  getImageUrl(product, options = {}) {
+    if (!product || !product.imagen_url) {
+      // Imagen por defecto si no hay
+      return (
+        options.defaultImage ||
+        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+      );
     }
 
-    const { data, error } = await query;
+    let imageUrl = product.imagen_url;
 
-    if (error) throw error;
-    return data;
+    // Aplicar transformaciones de CDN si están disponibles
+    if (options.width || options.height || options.quality) {
+      const url = new URL(imageUrl);
+      const params = new URLSearchParams();
+
+      if (options.width) params.append("width", options.width);
+      if (options.height) params.append("height", options.height);
+      if (options.quality) params.append("quality", options.quality);
+      if (options.resize) params.append("resize", options.resize);
+
+      if (params.toString()) {
+        imageUrl = `${imageUrl}?${params.toString()}`;
+      }
+    }
+
+    return imageUrl;
   }
 
   // Eliminar imagen
-  async deleteImage(bucket, filePath, deleteFromDatabase = true) {
+  async deleteProductImage(imageUrl, productId = null) {
     try {
-      // Eliminar de Storage
-      const { error: storageError } = await supabase.storage
-        .from(bucket)
-        .remove([filePath]);
+      console.log("🟡 Eliminando imagen:", imageUrl);
 
-      if (storageError) throw storageError;
+      // Extraer el path de la URL de Supabase Storage
+      const urlParts = imageUrl.split("/");
+      const bucketIndex = urlParts.findIndex(
+        (part) => part === "storage" || part === "supabase.co"
+      );
 
-      // Eliminar de la base de datos si es necesario
-      if (deleteFromDatabase) {
-        const { error: dbError } = await supabase
-          .from("images")
-          .delete()
-          .eq("path", filePath);
-
-        if (dbError) throw dbError;
+      if (bucketIndex === -1) {
+        throw new Error("URL de imagen no válida");
       }
 
+      // La estructura típica es: https://xxx.supabase.co/storage/v1/object/public/images/path/to/file.jpg
+      const filePath = urlParts.slice(bucketIndex + 4).join("/"); // Saltar 'storage/v1/object/public/images'
+
+      console.log("📁 Ruta a eliminar:", filePath);
+
+      // Eliminar de Storage
+      const { error: storageError } = await supabase.storage
+        .from("images")
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error("❌ Error eliminando de storage:", storageError);
+        throw storageError;
+      }
+
+      // Si se proporciona productId, actualizar el producto para quitar la URL
+      if (productId) {
+        const { error: updateError } = await supabase
+          .from("Productos")
+          .update({
+            imagen_url: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id_producto", productId);
+
+        if (updateError) {
+          console.error("⚠️ Error quitando URL del producto:", updateError);
+          // No lanzamos error, solo registramos
+        }
+      }
+
+      console.log("✅ Imagen eliminada exitosamente");
       return { success: true };
     } catch (error) {
-      console.error("Error en deleteImage:", error);
-      return { success: false, error: error.message };
+      console.error("❌ Error en deleteProductImage:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
     }
-  }
-
-  // Subir múltiples imágenes
-  async uploadMultipleImages(files, options = {}) {
-    const uploadPromises = files.map((file) => this.uploadImage(file, options));
-
-    const results = await Promise.allSettled(uploadPromises);
-
-    const successful = results
-      .filter((result) => result.status === "fulfilled" && result.value.success)
-      .map((result) => result.value);
-
-    const failed = results.filter(
-      (result) => result.status === "rejected" || !result.value.success
-    );
-
-    return {
-      successful,
-      failed,
-      total: files.length,
-      successCount: successful.length,
-      failCount: failed.length,
-    };
-  }
-
-  // Optimizar URL de imagen (para CDN)
-  optimizeImageUrl(url, options = {}) {
-    if (!url) return url;
-
-    // Aquí puedes agregar transformaciones de CDN si Supabase las soporta
-    // Por ejemplo, para resizing, cropping, etc.
-    let optimizedUrl = url;
-
-    if (options.width || options.height) {
-      optimizedUrl += `?width=${options.width || ""}&height=${
-        options.height || ""
-      }`;
-    }
-
-    if (options.quality) {
-      optimizedUrl += `${optimizedUrl.includes("?") ? "&" : "?"}quality=${
-        options.quality
-      }`;
-    }
-
-    return optimizedUrl;
   }
 }
 
-// Exportar instancia única
-export const imageService = new ImageService();
+export const productImageService = new ProductImageService();

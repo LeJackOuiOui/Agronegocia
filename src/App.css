@@ -142,53 +142,9 @@ html.dark .footer {
   background-color: oklch(20.5% 0 0);
   color: #ccc;
 }
-
-html.dark .footer-column h4 {
-  color: #fff;
-}
-
-html.dark .footer-column ul li a {
-  color: #aaa;
-}
-
-html.dark .footer-column ul li a:hover {
-  color: #fff;
-}
-
 /* Cards de productos */
 html.dark .product-card {
   background-color: #1e1e1e;
   border: 1px solid #333;
   color: #ddd;
-}
-
-.carousel {
-  position: relative;
-  width: 600px;
-  margin: auto;
-  overflow: hidden;
-}
-
-.carousel img {
-  width: 100%;
-  border-radius: 8px;
-}
-
-.carousel-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-}
-
-.carousel-btn.left {
-  left: 10px;
-}
-
-.carousel-btn.right {
-  right: 10px;
 }

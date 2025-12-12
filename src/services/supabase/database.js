@@ -6,7 +6,7 @@ export const database = {
   usuarios: {
     create: async (userData) => {
       const { data, error } = await supabase
-        .from("Usuarios")
+        .from("Usuario")
         .insert([userData])
         .select();
 
@@ -16,18 +16,18 @@ export const database = {
 
     getByCedula: async (cedula) => {
       const { data, error } = await supabase
-        .from("Usuarios")
+        .from("Usuario")
         .select("*")
         .eq("cedula", cedula)
         .single();
 
-      if (error) throw error;
+      if (error && error.code !== "PGRST116") throw error; // PGRST116 = no encontrado
       return data;
     },
 
     getByAuthId: async (authId) => {
       const { data, error } = await supabase
-        .from("Usuarios")
+        .from("Usuario")
         .select("*")
         .eq("auth_id", authId)
         .single();
@@ -38,7 +38,7 @@ export const database = {
 
     update: async (cedula, updates) => {
       const { data, error } = await supabase
-        .from("Usuarios")
+        .from("Usuario")
         .update(updates)
         .eq("cedula", cedula)
         .select();
@@ -47,24 +47,24 @@ export const database = {
       return data[0];
     },
 
-    // Verificar si existe usuario por cédula
     exists: async (cedula) => {
       const { data, error } = await supabase
-        .from("Usuarios")
+        .from("Usuario")
         .select("cedula")
         .eq("cedula", cedula)
         .single();
 
-      return !error && data !== null;
+      // Si hay error y no es "no encontrado", lanzar error
+      if (error && error.code !== "PGRST116") throw error;
+      return !!data;
     },
   },
 
-  // ===== VENDEDORES ===== (cedula es FK de Usuarios)
+  // ===== VENDEDORES =====
   vendedores: {
-    // Crear vendedor - cédula debe existir en Usuarios
     create: async (vendedorData) => {
       try {
-        // Verificar que la cédula exista en Usuarios
+        // Verificar que la cédula exista
         const usuarioExiste = await database.usuarios.exists(
           vendedorData.cedula
         );
@@ -96,14 +96,13 @@ export const database = {
       }
     },
 
-    // Obtener vendedor por cédula (FK)
     getByCedula: async (cedula) => {
       const { data, error } = await supabase
         .from("Vendedores")
         .select(
           `
           *,
-          usuario:Usuarios (*)
+          usuario:Usuario!inner(*)
         `
         )
         .eq("cedula", cedula)
@@ -113,15 +112,14 @@ export const database = {
       return data;
     },
 
-    // Obtener vendedor por ID autoincremental
     getById: async (id_vendedor) => {
       const { data, error } = await supabase
         .from("Vendedores")
         .select(
           `
           *,
-          usuario:Usuarios (*),
-          productos:Productos (*)
+          usuario:Usuario!inner(*),
+          productos:Productos(*)
         `
         )
         .eq("id_vendedor", id_vendedor)
@@ -131,14 +129,13 @@ export const database = {
       return data;
     },
 
-    // Obtener todos los vendedores con info de usuario
     getAll: async () => {
       const { data, error } = await supabase
         .from("Vendedores")
         .select(
           `
           *,
-          usuario:Usuarios (nombre, telefono, correo)
+          usuario:Usuario!inner(nombre, telefono, correo)
         `
         )
         .order("nombre");
@@ -147,7 +144,6 @@ export const database = {
       return data;
     },
 
-    // Actualizar vendedor
     update: async (cedula, updates) => {
       const { data, error } = await supabase
         .from("Vendedores")
@@ -159,7 +155,6 @@ export const database = {
       return data[0];
     },
 
-    // Eliminar vendedor (solo elimina de Vendedores, no de Usuarios)
     delete: async (cedula) => {
       const { error } = await supabase
         .from("Vendedores")
@@ -173,38 +168,20 @@ export const database = {
 
       return { success: true };
     },
-
-    // Buscar vendedores por nombre o dirección
-    search: async (searchTerm) => {
-      const { data, error } = await supabase
-        .from("Vendedores")
-        .select(
-          `
-          *,
-          usuario:Usuarios (*)
-        `
-        )
-        .or(`nombre.ilike.%${searchTerm}%,direccion.ilike.%${searchTerm}%`)
-        .order("nombre");
-
-      if (error) throw error;
-      return data;
-    },
   },
 
   // ===== PRODUCTOS =====
   productos: {
-    // Crear producto - verifica que id_vendedor exista
     create: async (productoData) => {
       try {
         // Verificar que el vendedor existe
-        const { data: vendedor } = await supabase
+        const { data: vendedor, error: vendedorError } = await supabase
           .from("Vendedores")
           .select("id_vendedor")
           .eq("id_vendedor", productoData.id_vendedor)
           .single();
 
-        if (!vendedor) {
+        if (vendedorError || !vendedor) {
           throw new Error("El vendedor no existe");
         }
 
@@ -221,40 +198,19 @@ export const database = {
       }
     },
 
-    // Obtener producto con vendedor y usuario
-    getByIdWithDetails: async (id_producto) => {
-      const { data, error } = await supabase
-        .from("Productos")
-        .select(
-          `
-          *,
-          vendedor:Vendedores (
-            *,
-            usuario:Usuarios (*)
-          )
-        `
-        )
-        .eq("id_producto", id_producto)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-
-    // Obtener todos los productos con detalles completos
     getAllWithDetails: async (filters = {}) => {
       let query = supabase
         .from("Productos")
         .select(
           `
           *,
-          vendedor:Vendedores (
+          vendedor:Vendedores!inner(
             *,
-            usuario:Usuarios (nombre, telefono, correo)
+            usuario:Usuario!inner(nombre, telefono, correo)
           )
         `
         )
-        .order("id_producto", { ascending: false });
+        .order("created_at", { ascending: false });
 
       // Aplicar filtros
       if (filters.id_vendedor) {
@@ -272,9 +228,12 @@ export const database = {
 
       if (filters.searchTerm) {
         query = query.or(
-          `nombre.ilike.%${filters.searchTerm}%,` +
-            `descripcion.ilike.%${filters.searchTerm}%`
+          `nombre.ilike.%${filters.searchTerm}%,descripcion.ilike.%${filters.searchTerm}%`
         );
+      }
+
+      if (filters.limit) {
+        query = query.limit(filters.limit);
       }
 
       const { data, error } = await query;
@@ -283,29 +242,36 @@ export const database = {
       return data;
     },
 
-    // Obtener productos de un vendedor específico
-    getByVendedorCedula: async (cedula) => {
-      // Primero obtener el id_vendedor desde la cédula
-      const { data: vendedor, error: vendedorError } = await supabase
-        .from("Vendedores")
-        .select("id_vendedor")
-        .eq("cedula", cedula)
+    getByIdWithDetails: async (id_producto) => {
+      const { data, error } = await supabase
+        .from("Productos")
+        .select(
+          `
+          *,
+          vendedor:Vendedores!inner(
+            *,
+            usuario:Usuario!inner(*)
+          )
+        `
+        )
+        .eq("id_producto", id_producto)
         .single();
 
-      if (vendedorError) throw vendedorError;
-
-      // Luego obtener los productos
-      const { data: productos, error: productosError } = await supabase
-        .from("Productos")
-        .select("*")
-        .eq("id_vendedor", vendedor.id_vendedor)
-        .order("id_producto", { ascending: false });
-
-      if (productosError) throw productosError;
-      return productos;
+      if (error) throw error;
+      return data;
     },
 
-    // Resto de funciones permanecen similares con ajustes
+    getByVendedorId: async (id_vendedor) => {
+      const { data, error } = await supabase
+        .from("Productos")
+        .select("*")
+        .eq("id_vendedor", id_vendedor)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+
     update: async (id_producto, updates) => {
       const { data, error } = await supabase
         .from("Productos")
@@ -325,59 +291,85 @@ export const database = {
 
       if (error) throw error;
     },
+
+    // Buscar productos
+    search: async (searchTerm) => {
+      const { data, error } = await supabase
+        .from("Productos")
+        .select(
+          `
+          *,
+          vendedor:Vendedores!inner(
+            *,
+            usuario:Usuario!inner(nombre, telefono, correo)
+          )
+        `
+        )
+        .or(`nombre.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%`)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
   },
 
-  // ===== RELACIONES COMPLEJAS =====
+  // ===== RELACIONES =====
   relaciones: {
-    // Obtener perfil completo: Usuario + Vendedor + Productos
     getPerfilCompleto: async (cedula) => {
       try {
-        // Obtener usuario
         const usuario = await database.usuarios.getByCedula(cedula);
         if (!usuario) return null;
 
         let vendedor = null;
         let productos = [];
 
-        // Si es vendedor, obtener datos
         if (usuario.es_vendedor) {
           vendedor = await database.vendedores.getByCedula(cedula);
           if (vendedor) {
-            productos = await database.productos.getAllWithDetails({
-              id_vendedor: vendedor.id_vendedor,
-            });
+            productos = await database.productos.getByVendedorId(
+              vendedor.id_vendedor
+            );
           }
         }
 
-        return {
-          usuario,
-          vendedor,
-          productos,
-        };
+        return { usuario, vendedor, productos };
       } catch (error) {
         console.error("Error obteniendo perfil completo:", error);
         throw error;
       }
     },
+  },
+};
 
-    // Verificar permisos: si usuario puede modificar producto
-    canEditProduct: async (cedula, id_producto) => {
-      try {
-        // Obtener producto con vendedor
-        const producto = await database.productos.getByIdWithDetails(
-          id_producto
-        );
-        if (!producto) return false;
+// Funciones de suscripción en tiempo real
+export const realtime = {
+  subscribeToProductos: (callback) => {
+    return supabase
+      .channel("productos-cambios")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "Productos",
+        },
+        callback
+      )
+      .subscribe();
+  },
 
-        // Obtener vendedor del producto
-        const vendedorCedula = producto.vendedor.cedula;
-
-        // Comparar con la cédula del usuario autenticado
-        return cedula === vendedorCedula;
-      } catch (error) {
-        console.error("Error verificando permisos:", error);
-        return false;
-      }
-    },
+  subscribeToVendedores: (callback) => {
+    return supabase
+      .channel("vendedores-cambios")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "Vendedores",
+        },
+        callback
+      )
+      .subscribe();
   },
 };

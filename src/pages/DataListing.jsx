@@ -1,5 +1,6 @@
 // import LoginForm from "../components/forms/LoginForm";
-import ListaProductos from "../components/ListaProductos";
+import Layout from "../components/UI/Layout";
+import ListaProductos from "../components/UI/ListaProductos";
 
 export default function DataListing() {
   const productos = [
@@ -66,14 +67,13 @@ export default function DataListing() {
   ];
 
   return (
-    <div className="flex justify-center">
-      <div className="shadow-xl rounded-xl p-8 w-[90%] max-w-[1200px]">
-        {/* Formulario */}
-        {/* <LoginForm /> */}
-
-        {/* Lista de productos */}
-        <ListaProductos productos={productos} />
+    <Layout>
+      <div className="flex justify-center">
+        <div className="shadow-xl rounded-xl p-8 w-[90%] max-w-[1200px]">
+          {/* Lista de productos */}
+          <ListaProductos productos={productos} />
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }

@@ -1,18 +1,23 @@
-// src/components/BecomeVendorForm.jsx
+// src/components/forms/SellerForm.jsx
 import React, { useState } from "react";
-import { authService } from "../../services/supabase/auth";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../context/AppContext";
+import { authService } from "../../services/supabase/auth";
+import "../../styles/SellerForm.css";
 
-export default function BecomeVendorForm() {
+function SellerForm() {
   const navigate = useNavigate();
+  const { user, updateUser } = useAppContext();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const [formData, setFormData] = useState({
     nombre: "",
     direccion: "",
     telefono: "",
     descripcion: "",
+    // Podrías agregar más campos específicos para vendedores
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,35 +25,42 @@ export default function BecomeVendorForm() {
     setError("");
 
     try {
-      // Obtener usuario actual para sacar la cédula
-      const userProfile = await authService.getUserProfile();
-      if (!userProfile) {
-        throw new Error("No hay usuario autenticado");
+      if (!user) {
+        throw new Error("Debes iniciar sesión primero");
+      }
+
+      // Obtener cédula del usuario
+      const cedula = user.user_metadata?.cedula;
+
+      if (!cedula) {
+        throw new Error("No se encontró la cédula del usuario");
       }
 
       // Convertir en vendedor
-      const result = await authService.convertToVendedor(
-        userProfile.cedula,
-        formData
-      );
+      const result = await authService.convertToVendedor(cedula, formData);
 
-      alert("¡Ahora eres vendedor!");
-      navigate("/dashboard");
+      // Actualizar estado global
+      await updateUser();
+
+      alert("¡Ahora eres vendedor! Ya puedes crear productos.");
+      navigate("/");
     } catch (err) {
       setError(err.message);
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Convertirse en Vendedor</h2>
-      {error && <div style={{ color: "red" }}>{error}</div>}
+    <div className="seller-form-container">
+      <h2>Registrarse como Vendedor</h2>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Nombre del negocio:</label>
+      {error && <div className="error-message">{error}</div>}
+
+      <form onSubmit={handleSubmit} className="seller-form">
+        <div className="form-group">
+          <label>Nombre del negocio *</label>
           <input
             type="text"
             value={formData.nombre}
@@ -56,11 +68,12 @@ export default function BecomeVendorForm() {
               setFormData({ ...formData, nombre: e.target.value })
             }
             required
+            placeholder="Ej: Mi Tienda Online"
           />
         </div>
 
-        <div>
-          <label>Dirección:</label>
+        <div className="form-group">
+          <label>Dirección *</label>
           <input
             type="text"
             value={formData.direccion}
@@ -68,11 +81,12 @@ export default function BecomeVendorForm() {
               setFormData({ ...formData, direccion: e.target.value })
             }
             required
+            placeholder="Dirección completa"
           />
         </div>
 
-        <div>
-          <label>Teléfono de contacto:</label>
+        <div className="form-group">
+          <label>Teléfono de contacto *</label>
           <input
             type="tel"
             value={formData.telefono}
@@ -80,24 +94,48 @@ export default function BecomeVendorForm() {
               setFormData({ ...formData, telefono: e.target.value })
             }
             required
+            placeholder="Ej: 3001234567"
           />
         </div>
 
-        <div>
-          <label>Descripción del negocio:</label>
+        <div className="form-group">
+          <label>Descripción del negocio</label>
           <textarea
             value={formData.descripcion}
             onChange={(e) =>
               setFormData({ ...formData, descripcion: e.target.value })
             }
             rows={4}
+            placeholder="Cuéntanos sobre tu negocio..."
+            maxLength={500}
           />
         </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Registrando..." : "Registrarse como Vendedor"}
-        </button>
+        <div className="benefits">
+          <h4>Beneficios de ser vendedor:</h4>
+          <ul>
+            <li>✅ Puedes crear y vender productos</li>
+            <li>✅ Apareces en la lista de vendedores</li>
+            <li>✅ Acceso a estadísticas de ventas</li>
+            <li>✅ Soporte prioritario</li>
+          </ul>
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="cancel-btn"
+            onClick={() => navigate("/")}
+          >
+            Cancelar
+          </button>
+          <button type="submit" className="submit-btn" disabled={loading}>
+            {loading ? "Registrando..." : "Registrarme como Vendedor"}
+          </button>
+        </div>
       </form>
     </div>
   );
 }
+
+export default SellerForm;
