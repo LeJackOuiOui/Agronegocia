@@ -51,13 +51,15 @@
 }
 
 .footer-container {
-  width: 95%;          /* ocupa casi todo el ancho */
-  max-width: 1400px;   /* límite más grande */
-  margin: auto;
+  width: 95%;            /* ocupa casi todo el ancho */
+  max-width: 1600px;     /* aumenta el límite máximo */
+  margin: auto;          /* mantiene el centrado */
+  padding: 0 40px;       /* aire a los lados */
   display: flex;
   flex-direction: column;
   gap: 50px;
 }
+
 
 
 /* Marca */
@@ -125,4 +127,43 @@
   border-top: 1px solid #333;
   font-size: 14px;
   color: #aaa;
+}
+
+/* Dark mode */
+
+/* Fondo y texto global */
+html.dark {
+  background-color: #121212;
+  color: #f0f0f0;
+}
+
+/* Header */
+html.dark header {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+/* Footer */
+html.dark .footer {
+  background-color: #1e1e1e;
+  color: #ccc;
+}
+
+html.dark .footer-column h4 {
+  color: #fff;
+}
+
+html.dark .footer-column ul li a {
+  color: #aaa;
+}
+
+html.dark .footer-column ul li a:hover {
+  color: #fff;
+}
+
+/* Cards de productos */
+html.dark .product-card {
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  color: #ddd;
 }
