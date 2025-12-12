@@ -1,0 +1,185 @@
+/* src/components/forms/SellerForm.css */
+.seller-form-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.seller-form-container h2 {
+  text-align: center;
+  color: #9fd8a0;
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  font-weight: bold;
+}
+
+.seller-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.seller-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-form .form-group label {
+  color: #9fd8a0;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.seller-form .form-group input,
+.seller-form .form-group textarea {
+  padding: 0.75rem 1rem;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.seller-form .form-group input:focus,
+.seller-form .form-group textarea:focus {
+  outline: none;
+  border-color: #9fd8a0;
+  box-shadow: 0 0 0 2px rgba(159, 216, 160, 0.2);
+}
+
+.seller-form .form-group input::placeholder,
+.seller-form .form-group textarea::placeholder {
+  color: #666;
+}
+
+.seller-form .form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Benefits Section */
+.benefits {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background-color: rgba(159, 216, 160, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #9fd8a0;
+}
+
+.benefits h4 {
+  color: #9fd8a0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.benefits ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.benefits li {
+  color: #ccc;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.benefits li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #9fd8a0;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* Form Actions */
+.seller-form .form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #444;
+}
+
+.seller-form .cancel-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.seller-form .cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+.seller-form .submit-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #9fd8a0;
+  color: #2b2b2b;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.seller-form .submit-btn:hover:not(:disabled) {
+  background-color: #8bc78c;
+  transform: translateY(-1px);
+}
+
+.seller-form .submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.seller-form .error-message {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 4px solid #dc3545;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+/* Info Box */
+.info-box {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 4px solid #ffc107;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .seller-form-container {
+    padding: 0 1rem;
+  }
+
+  .seller-form .form-actions {
+    flex-direction: column;
+  }
+
+  .seller-form .cancel-btn,
+  .seller-form .submit-btn {
+    width: 100%;
+  }
+
+  .benefits {
+    padding: 1rem;
+  }
+}
